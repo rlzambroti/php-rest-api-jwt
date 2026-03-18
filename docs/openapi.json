@@ -1,0 +1,322 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "API REST Acadêmica — Engenharia de Software",
+    "version": "1.0.0",
+    "description": "Modelo de API REST para acadêmicos do curso de Engenharia de Software.\n\nImplementa autenticação JWT com Refresh Token Rotation e CRUD de clientes,\nseguindo os padrões **Clean Code**, **OOP** e **MVC**.\n\n---\n\n## Como autenticar\n\n1. Faça login em `POST /auth/login` informando usuário e senha\n2. Copie o `access_token` retornado\n3. Clique em **Authorize** (cadeado) e cole: `Bearer {access_token}`\n4. Todas as chamadas protegidas incluirão o token automaticamente\n\n## Quando o access token expirar\n\nChame `POST /auth/refresh` com o `refresh_token` para obter novos tokens.\nO refresh token antigo é invalidado após o uso (**Refresh Token Rotation**).",
+    "contact": {
+      "name": "Curso de Engenharia de Software",
+      "email": "eng.software@academico.edu.br"
+    },
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost/a/v2/public",
+      "description": "Servidor de desenvolvimento (XAMPP)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Autenticação",
+      "description": "Login e renovação de tokens JWT"
+    },
+    {
+      "name": "Clientes",
+      "description": "CRUD de clientes — requer autenticação JWT"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Informe o access_token obtido no login. Formato: Bearer {token}"
+      }
+    },
+    "schemas": {
+      "TokenResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "success" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "access_token":  { "type": "string", "description": "JWT de curta duração (15 min)" },
+              "refresh_token": { "type": "string", "description": "Token de renovação (7 dias)" },
+              "token_type":    { "type": "string", "example": "Bearer" },
+              "expires_in":    { "type": "integer", "example": 900, "description": "Segundos até o access_token expirar" }
+            }
+          }
+        }
+      },
+      "Cliente": {
+        "type": "object",
+        "properties": {
+          "id":               { "type": "integer", "example": 1 },
+          "cpf":              { "type": "string",  "example": "529.982.247-25" },
+          "nome":             { "type": "string",  "example": "Maria da Silva" },
+          "data_nascimento":  { "type": "string",  "format": "date", "example": "1985-03-10" },
+          "whatsapp":         { "type": "string",  "example": "(11) 98765-4321", "nullable": true },
+          "email":            { "type": "string",  "format": "email", "example": "maria@email.com", "nullable": true },
+          "created_at":       { "type": "string",  "format": "date-time" },
+          "updated_at":       { "type": "string",  "format": "date-time" }
+        }
+      },
+      "ClienteInput": {
+        "type": "object",
+        "required": ["cpf", "nome", "data_nascimento"],
+        "properties": {
+          "cpf":              { "type": "string", "example": "529.982.247-25", "description": "CPF válido (com ou sem formatação)" },
+          "nome":             { "type": "string", "example": "Maria da Silva" },
+          "data_nascimento":  { "type": "string", "format": "date", "example": "1985-03-10", "description": "Formato: YYYY-MM-DD" },
+          "whatsapp":         { "type": "string", "example": "(11) 98765-4321" },
+          "email":            { "type": "string", "format": "email", "example": "maria@email.com" }
+        }
+      },
+      "Erro": {
+        "type": "object",
+        "properties": {
+          "status":  { "type": "string", "example": "error" },
+          "message": { "type": "string", "example": "Descrição do erro." }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "Realizar login",
+        "description": "Autentica o usuário com usuário e senha.\n\nRetorna um **access token** (JWT, 15 min) para autenticar chamadas e um **refresh token** (7 dias) para renovar os tokens quando o access token expirar.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["usuario", "senha"],
+                "properties": {
+                  "usuario": { "type": "string", "example": "admin" },
+                  "senha":   { "type": "string", "format": "password", "example": "123456" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login realizado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TokenResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Campos obrigatórios não informados",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } }
+          },
+          "401": {
+            "description": "Usuário ou senha incorretos",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "Renovar tokens",
+        "description": "Troca o refresh token por um novo par de tokens.\n\nO refresh token antigo é **invalidado** após o uso (**Refresh Token Rotation**).\nSe um refresh token for roubado e usado, o legítimo fica inválido, alertando sobre a anomalia.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refresh_token"],
+                "properties": {
+                  "refresh_token": { "type": "string", "example": "a1b2c3d4..." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens renovados com sucesso",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TokenResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "refresh_token não informado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } }
+          },
+          "401": {
+            "description": "Refresh token inválido ou expirado",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } }
+          }
+        }
+      }
+    },
+    "/clientes": {
+      "get": {
+        "tags": ["Clientes"],
+        "summary": "Listar clientes",
+        "description": "Retorna todos os clientes cadastrados, ordenados por nome.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Lista de clientes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "success" },
+                    "total":  { "type": "integer", "example": 4 },
+                    "data":   { "type": "array", "items": { "$ref": "#/components/schemas/Cliente" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Não autenticado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } }
+        }
+      },
+      "post": {
+        "tags": ["Clientes"],
+        "summary": "Criar cliente",
+        "description": "Cadastra um novo cliente. O CPF é validado (formato + dígitos verificadores) e deve ser único.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ClienteInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cliente criado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status":  { "type": "string", "example": "success" },
+                    "message": { "type": "string", "example": "Cliente criado com sucesso." },
+                    "data":    { "$ref": "#/components/schemas/Cliente" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Dados inválidos (CPF incorreto, campos ausentes...)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } },
+          "401": { "description": "Não autenticado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } },
+          "409": { "description": "CPF já cadastrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } }
+        }
+      }
+    },
+    "/clientes/{id}": {
+      "get": {
+        "tags": ["Clientes"],
+        "summary": "Buscar cliente por ID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "description": "ID numérico do cliente", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dados do cliente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "success" },
+                    "data":   { "$ref": "#/components/schemas/Cliente" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Não autenticado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } },
+          "404": { "description": "Cliente não encontrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } }
+        }
+      },
+      "put": {
+        "tags": ["Clientes"],
+        "summary": "Atualizar cliente",
+        "description": "Atualiza todos os dados de um cliente. Envie todos os campos, mesmo os que não foram alterados.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ClienteInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cliente atualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status":  { "type": "string", "example": "success" },
+                    "message": { "type": "string", "example": "Cliente atualizado com sucesso." },
+                    "data":    { "$ref": "#/components/schemas/Cliente" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Dados inválidos", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } },
+          "401": { "description": "Não autenticado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } },
+          "404": { "description": "Cliente não encontrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } },
+          "409": { "description": "CPF já pertence a outro cliente", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } }
+        }
+      },
+      "delete": {
+        "tags": ["Clientes"],
+        "summary": "Excluir cliente",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cliente excluído",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status":  { "type": "string", "example": "success" },
+                    "message": { "type": "string", "example": "Cliente excluído com sucesso." }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Não autenticado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } },
+          "404": { "description": "Cliente não encontrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Erro" } } } }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+# Ambiente
+.env
+
+# Claude Code
+.claude/
+
+# Logs
+*.log
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

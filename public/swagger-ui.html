@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Acadêmica — Documentação</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+    <style>
+        body { margin: 0; background: #fafafa; }
+        .topbar { display: none; }
+        .swagger-ui .info .title { font-size: 2rem; }
+        .swagger-ui .info { margin: 30px 0; }
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function () {
+            // Constrói a URL do openapi.json dinamicamente com base na URL atual.
+            // Se esta página é servida em /a/v2/public/docs,
+            // o spec estará em /a/v2/public/docs/openapi.json
+            var specUrl = window.location.pathname.replace(/\/+$/, '') + '/openapi.json';
+
+            SwaggerUIBundle({
+                url: specUrl,
+                dom_id: '#swagger-ui',
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                layout: 'StandaloneLayout',
+                persistAuthorization: true,      // Mantém o token após reload
+                displayRequestDuration: true,    // Mostra tempo de resposta
+                operationsSorter: 'method',      // Ordena por método HTTP
+                docExpansion: 'list',            // Mostra tags expandidas, operações fechadas
+            });
+        };
+    </script>
+</body>
+</html>

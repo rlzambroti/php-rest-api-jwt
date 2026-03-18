@@ -1,0 +1,7 @@
+# Remove index.php da URL e redireciona tudo para ele
+RewriteEngine On
+
+# Se não for um arquivo ou diretório real, redireciona para index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
