@@ -187,7 +187,15 @@ class Request
 
         // Remove o base path do início da URI (se presente)
         if ($scriptDir !== '/' && strpos($uri, $scriptDir) === 0) {
+            // Acesso direto via /public/ (ex.: /a/v2/public/auth/login)
             $uri = substr($uri, strlen($scriptDir));
+        } else {
+            // Acesso via .htaccess raiz (ex.: /a/v2/auth/login → reescrito internamente)
+            // REQUEST_URI não inclui "public", mas SCRIPT_NAME sim — usamos o diretório pai
+            $baseDir = dirname($scriptDir);
+            if ($baseDir !== '/' && strpos($uri, $baseDir) === 0) {
+                $uri = substr($uri, strlen($baseDir));
+            }
         }
 
         // Garante que começa com '/'

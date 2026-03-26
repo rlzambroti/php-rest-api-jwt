@@ -63,3 +63,7 @@ CREATE TABLE IF NOT EXISTS clientes (
     UNIQUE KEY uk_cpf (cpf),
     KEY        idx_nome (nome)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO usuarios
+(id, usuario, senha, created_at)
+VALUES(1, 'admin', '$2y$10$aiMOvXC8z3FHQ5Ua2a9QI.eMI4vdhnhMKrdzhNqoqN5QGz9iwjdtC', '2026-03-18 16:08:59');
